@@ -20,6 +20,7 @@ require (
 	google.golang.org/grpc v1.69.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
+	gorm.io/driver/postgres v1.24.0
 )
 
 require (
