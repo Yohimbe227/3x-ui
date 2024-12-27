@@ -11,10 +11,10 @@ import (
 	"x-ui/config"
 	"x-ui/database/model"
 	"x-ui/xray"
-
-	"gorm.io/driver/sqlite"
+    "fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"gorm.io/driver/postgres"
 )
 
 var db *gorm.DB
@@ -66,13 +66,7 @@ func isTableEmpty(tableName string) (bool, error) {
 	return count == 0, err
 }
 
-func InitDB(dbPath string) error {
-	dir := path.Dir(dbPath)
-	err := os.MkdirAll(dir, fs.ModePerm)
-	if err != nil {
-		return err
-	}
-
+func InitDB() error {
 	var gormLogger logger.Interface
 
 	if config.IsDebug() {
@@ -81,10 +75,24 @@ func InitDB(dbPath string) error {
 		gormLogger = logger.Discard
 	}
 
-	c := &gorm.Config{
-		Logger: gormLogger,
+	// Получение параметров подключения из переменных окружения
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+
+	if dbHost == "" || dbPort == "" || dbUser == "" || dbPassword == "" || dbName == "" {
+		return fmt.Errorf("database connection parameters are not fully provided")
 	}
-	db, err = gorm.Open(sqlite.Open(dbPath), c)
+
+	// Формирование строки подключения
+	dbURL := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPassword, dbName)
+
+	db, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{
+		Logger: gormLogger,
+	})
 	if err != nil {
 		return err
 	}
