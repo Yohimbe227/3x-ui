@@ -1,8 +1,9 @@
-version: "3.8"
-
 services:
   3x-ui:
-    image: ghcr.io/mhsanaei/3x-ui:latest
+#    image: ghcr.io/mhsanaei/3x-ui:v1
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: 3x-ui
     hostname: 164.90.181.43
     volumes:
@@ -14,6 +15,8 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: x_db
+#    ports:
+#      - "5432:5432"
     tty: true
     restart: unless-stopped
     depends_on:
