@@ -5,18 +5,12 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: 3x-ui
-    hostname: 164.90.181.43
+    hostname: localhost
     volumes:
       - $PWD/cert/:/root/cert/
     environment:
-      XRAY_VMESS_AEAD_FORCED: "false"
-      DB_HOST: "164.90.181.43"
-      DB_PORT: "5432"
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: x_db
-#    ports:
-#      - "5432:5432"
+      - DATABASE_URL=host=db user=postgres password=postgres dbname=x_db port=5432 sslmode=disable
+
     tty: true
     restart: unless-stopped
     depends_on:
@@ -33,6 +27,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-h", "localhost", "-p", "5432", "-U", "postgres" ]  # Проверка доступности базы данных
+      interval: 10s  # Периодичность проверки
+      retries: 3      # Сколько раз проверять, прежде чем считать базу недоступной
+      timeout: 5s     # Время ожидания ответа от базы
+      start_period: 30s # Время ожидания до начала проверки
 
 volumes:
   postgres_data:
