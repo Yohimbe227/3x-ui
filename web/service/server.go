@@ -484,104 +484,60 @@ func (s *ServerService) GetDb() ([]byte, error) {
 }
 
 func (s *ServerService) ImportDB(file multipart.File) error {
-	// Check if the file is a SQLite database
-	isValidDb, err := database.IsSQLiteDB(file)
-	if err != nil {
-		return common.NewErrorf("Error checking db file format: %v", err)
-	}
-	if !isValidDb {
-		return common.NewError("Invalid db file format")
-	}
+	// PostgreSQL не использует файлы базы данных напрямую, поэтому загружать файл как базу данных не имеет смысла.
+	// Вместо этого мы можем выполнять миграции или загрузку данных из файла в базу.
 
-	// Reset the file reader to the beginning
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		return common.NewErrorf("Error resetting file reader: %v", err)
-	}
-
-	// Save the file as temporary file
-	tempPath := fmt.Sprintf("%s.temp", config.GetDBPath())
-	// Remove the existing fallback file (if any) before creating one
-	_, err = os.Stat(tempPath)
-	if err == nil {
-		errRemove := os.Remove(tempPath)
-		if errRemove != nil {
-			return common.NewErrorf("Error removing existing temporary db file: %v", errRemove)
-		}
-	}
-	// Create the temporary file
+	// Сохранение загруженного файла как временного
+	tempPath := fmt.Sprintf("/tmp/uploaded_db.sql")
 	tempFile, err := os.Create(tempPath)
 	if err != nil {
-		return common.NewErrorf("Error creating temporary db file: %v", err)
+		return common.NewErrorf("Error creating temporary file: %v", err)
 	}
 	defer tempFile.Close()
 
-	// Remove temp file before returning
-	defer os.Remove(tempPath)
-
-	// Save uploaded file to temporary file
+	// Скопировать содержимое загруженного файла в временный файл
 	_, err = io.Copy(tempFile, file)
 	if err != nil {
-		return common.NewErrorf("Error saving db: %v", err)
+		return common.NewErrorf("Error saving file: %v", err)
 	}
 
-	// Check if we can init db or not
-	err = database.InitDB(tempPath)
+	// Закрыть файл перед использованием
+	tempFile.Close()
+
+	// Выполнить SQL команды из файла для PostgreSQL
+	db := database.GetDB()
+	sqlBytes, err := os.ReadFile(tempPath)
 	if err != nil {
-		return common.NewErrorf("Error checking db: %v", err)
+		return common.NewErrorf("Error reading temporary file: %v", err)
 	}
 
-	// Stop Xray
-	s.StopXrayService()
-
-	// Backup the current database for fallback
-	fallbackPath := fmt.Sprintf("%s.backup", config.GetDBPath())
-	// Remove the existing fallback file (if any)
-	_, err = os.Stat(fallbackPath)
-	if err == nil {
-		errRemove := os.Remove(fallbackPath)
-		if errRemove != nil {
-			return common.NewErrorf("Error removing existing fallback db file: %v", errRemove)
-		}
-	}
-	// Move the current database to the fallback location
-	err = os.Rename(config.GetDBPath(), fallbackPath)
+	sql := string(sqlBytes)
+	err = db.Exec(sql).Error
 	if err != nil {
-		return common.NewErrorf("Error backing up temporary db file: %v", err)
+		return common.NewErrorf("Error executing SQL file: %v", err)
 	}
 
-	// Remove the temporary file before returning
-	defer os.Remove(fallbackPath)
-
-	// Move temp to DB path
-	err = os.Rename(tempPath, config.GetDBPath())
+	// Удалить временный файл
+	err = os.Remove(tempPath)
 	if err != nil {
-		errRename := os.Rename(fallbackPath, config.GetDBPath())
-		if errRename != nil {
-			return common.NewErrorf("Error moving db file and restoring fallback: %v", errRename)
-		}
-		return common.NewErrorf("Error moving db file: %v", err)
+		return common.NewErrorf("Error removing temporary file: %v", err)
 	}
 
-	// Migrate DB
-	err = database.InitDB(config.GetDBPath())
+	// Миграция базы данных для обновления схемы
+	err = database.InitDB("")
 	if err != nil {
-		errRename := os.Rename(fallbackPath, config.GetDBPath())
-		if errRename != nil {
-			return common.NewErrorf("Error migrating db and restoring fallback: %v", errRename)
-		}
-		return common.NewErrorf("Error migrating db: %v", err)
+		return common.NewErrorf("Error migrating database: %v", err)
 	}
-	s.inboundService.MigrateDB()
 
-	// Start Xray
+	// Перезапустить Xray сервис
 	err = s.RestartXrayService()
 	if err != nil {
-		return common.NewErrorf("Imported DB but Failed to start Xray: %v", err)
+		return common.NewErrorf("Imported DB but failed to restart Xray: %v", err)
 	}
 
 	return nil
 }
+
 
 func (s *ServerService) GetNewX25519Cert() (interface{}, error) {
 	// Run the command
