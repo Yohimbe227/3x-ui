@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"log"
-	"os"
 
 	"x-ui/config"
 	"x-ui/database/model"
