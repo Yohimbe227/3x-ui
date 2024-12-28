@@ -1,7 +1,6 @@
 package database
 
 import (
-	"bytes"
 	"log"
 
 	"x-ui/config"
