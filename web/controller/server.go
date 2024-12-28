@@ -46,7 +46,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/installXray/:version", a.installXray)
 	g.POST("/logs/:count", a.getLogs)
 	g.POST("/getConfigJson", a.getConfigJson)
-	g.GET("/getDb", a.getDb)
+// 	g.GET("/getDb", a.getDb)
 	g.POST("/importDB", a.importDB)
 	g.POST("/getNewX25519Cert", a.getNewX25519Cert)
 }

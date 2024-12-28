@@ -7,7 +7,7 @@ services:
     container_name: 3x-ui
     hostname: localhost
     volumes:
-      - $PWD/cert/:/root/cert/
+      - /home/kamanchi/x-ui/cert/:/root/cert/
     environment:
       - DATABASE_URL=host=db user=postgres password=postgres dbname=x_db port=5432 sslmode=disable
       - PWD=${PWD}
