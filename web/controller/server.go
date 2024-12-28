@@ -134,28 +134,6 @@ func (a *ServerController) getConfigJson(c *gin.Context) {
 	jsonObj(c, configJson, nil)
 }
 
-func (a *ServerController) getDb(c *gin.Context) {
-	db, err := a.serverService.GetDb()
-	if err != nil {
-		jsonMsg(c, "get Database", err)
-		return
-	}
-
-	filename := "x-ui.db"
-
-	if !isValidFilename(filename) {
-		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("invalid filename"))
-		return
-	}
-
-	// Set the headers for the response
-	c.Header("Content-Type", "application/octet-stream")
-	c.Header("Content-Disposition", "attachment; filename="+filename)
-
-	// Write the file contents to the response
-	c.Writer.Write(db)
-}
-
 func isValidFilename(filename string) bool {
 	// Validate that the filename only contains allowed characters
 	return filenameRegex.MatchString(filename)
