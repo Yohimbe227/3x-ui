@@ -62,32 +62,47 @@ func isTableEmpty(tableName string) (bool, error) {
 }
 
 func InitDB(dsn string) error {
-	var gormLogger logger.Interface
+	// Проверяем, что строка подключения не пуста
+	if dsn == "" {
+		return fmt.Errorf("empty database DSN")
+	}
 
+	// Логирование уровня отладки
+	var gormLogger logger.Interface
 	if config.IsDebug() {
 		gormLogger = logger.Default
 	} else {
 		gormLogger = logger.Discard
 	}
 
+	// Логируем строку подключения для отладки (осторожно, не выводить пароли в логах)
+	log.Printf("Connecting to database with DSN: %s", dsn)
+
+	// Создаем конфигурацию для GORM
 	c := &gorm.Config{
 		Logger: gormLogger,
 	}
+
+	// Открываем соединение с PostgreSQL
 	var err error
 	db, err = gorm.Open(postgres.Open(dsn), c)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to connect to database: %v", err)
 	}
 
+	// Инициализация моделей и пользователя
 	if err := initModels(); err != nil {
-		return err
-	}
-	if err := initUser(); err != nil {
-		return err
+		return fmt.Errorf("failed to initialize models: %v", err)
 	}
 
+	if err := initUser(); err != nil {
+		return fmt.Errorf("failed to initialize user: %v", err)
+	}
+
+	// Возвращаем успешный результат
 	return nil
 }
+
 
 func CloseDB() error {
 	if db != nil {
