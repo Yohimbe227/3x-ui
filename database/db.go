@@ -110,16 +110,6 @@ func IsNotFound(err error) bool {
 	return err == gorm.ErrRecordNotFound
 }
 
-func IsSQLiteDB(file io.ReaderAt) (bool, error) {
-	signature := []byte("SQLite format 3\x00")
-	buf := make([]byte, len(signature))
-	_, err := file.ReadAt(buf, 0)
-	if err != nil {
-		return false, err
-	}
-	return bytes.Equal(buf, signature), nil
-}
-
 func Checkpoint() error {
 	err := db.Exec("PRAGMA wal_checkpoint;").Error
 	if err != nil {
